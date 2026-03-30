@@ -13,7 +13,7 @@ async function cargarDatos() {
     try {
         if (fechaMsg) fechaMsg.textContent = "Sincronizando con Google Sheets...";
 
-        // Agregamos un timestamp para evitar que el navegador guarde una versión vieja
+        // Agregamos un timestamp para evitar caché
         const urlFinal = `${urlPlanilla}&t=${Date.now()}`;
 
         const respuesta = await fetch(urlFinal);
@@ -24,8 +24,8 @@ async function cargarDatos() {
         
         const textRaw = await respuesta.text();
         
-        // Procesamos las líneas (eliminamos vacías y el encabezado)
-        const lineas = textRaw.split(/\r?\n/).filter(l => l.trim() !== "");
+        // Procesamos las líneas eliminando espacios en blanco al inicio/final de cada línea
+        const lineas = textRaw.split(/\r?\n/).map(l => l.trim()).filter(l => l !== "");
         const filas = lineas.slice(1); 
 
         if (filas.length === 0) {
@@ -33,17 +33,20 @@ async function cargarDatos() {
         }
 
         const datosMapeados = filas.map((fila) => {
-            // Google Sheets suele usar coma en el CSV publicado
-            const columnas = fila.split(',').map(c => c.replace(/^"|"$/g, '').trim());
+            // Usamos una expresión regular para separar por comas, pero respetando si hay comas dentro de comillas
+            const columnas = fila.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || fila.split(',');
+            
+            // Limpieza profunda de cada celda
+            const limpias = columnas.map(c => c.replace(/^"|"$/g, '').trim());
 
-            if (!columnas[0] || columnas[0] === "") return null;
+            if (!limpias[0] || limpias[0] === "") return null;
 
             return {
-                id: columnas[0],                         // Col A: SPRIA ID
-                difLogs: parseInt(columnas[1]) || 0,     // Col B: Dif Logs VS Hoy
-                clasifLogs: columnas[2] || '---',        // Col C: Clasificacion Logs
-                difImg: parseInt(columnas[3]) || 0,      // Col D: Dif Img VS Hoy
-                clasifImg: columnas[4] || '---'          // Col E: Clasificacion Img
+                id: limpias[0],                         // Col A: SPRIA ID
+                difLogs: parseInt(limpias[1].replace(/[^0-9-]/g, '')) || 0, // Col B: Forzar solo números
+                clasifLogs: limpias[2] || '---',        // Col C: Clasificacion Logs
+                difImg: parseInt(limpias[3].replace(/[^0-9-]/g, '')) || 0,  // Col D: Forzar solo números
+                clasifImg: limpias[4] || '---'          // Col E: Clasificacion Img
             };
         }).filter(d => d !== null);
 
@@ -54,7 +57,6 @@ async function cargarDatos() {
         if (fechaMsg) {
             fechaMsg.innerHTML = `<span style="color: #e74c3c;">❌ Error de conexión. Reintentando...</span>`;
         }
-        // Si falla, intentamos cargar datos de prueba tras 5 segundos
         setTimeout(mostrarDatosDePrueba, 2000);
     }
 }
@@ -105,7 +107,6 @@ function procesarYMostrar(datos) {
         lista.insertAdjacentHTML('beforeend', row);
     });
 
-    // Actualizamos los números de arriba
     actualizarKPIs(alDia, aviso, critico);
     
     const fecha = document.getElementById('fecha-actualizacion');
