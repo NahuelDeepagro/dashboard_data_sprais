@@ -1,6 +1,6 @@
 //const urlPlanilla = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-uq57ZAjgxzlcjOIWtlO_kya8IyM8RVDQW7iu_RkPMVVaWr91VCtxsTJQP6fjRmQj7855fMcoeu9h/pub?output=csv';
 
-**
+/**
  * CONFIGURACIÓN DE LA FUENTE DE DATOS
  * Pega aquí el enlace que obtuviste de "Publicar en la web" -> formato CSV.
  */
@@ -33,11 +33,11 @@ async function cargarDatos() {
             if (columnas.length < 2) return null; // Saltar filas vacías
 
             return {
-                id: columnas[0]?.trim(),           // Col A: SPRIA ID
-                difLogs: parseInt(columnas[1]) || 0, // Col B: Dif Logs VS Hoy
-                clasifLogs: columnas[2]?.trim(),    // Col C: Clasificacion Logs
-                difImg: parseInt(columnas[3]) || 0,  // Col D: Dif Img VS Hoy
-                clasifImg: columnas[4]?.trim()      // Col E: Clasificacion Img
+                id: columnas[0]?.trim(),             // Col A: SPRIA ID
+                difLogs: parseInt(columnas[1]) || 0,   // Col B: Dif Logs VS Hoy
+                clasifLogs: columnas[2]?.trim(),      // Col C: Clasificacion Logs
+                difImg: parseInt(columnas[3]) || 0,    // Col D: Dif Img VS Hoy
+                clasifImg: columnas[4]?.trim()        // Col E: Clasificacion Img
             };
         }).filter(d => d && d.id && d.id !== ""); // Filtrar nulos o vacíos
 
@@ -45,7 +45,8 @@ async function cargarDatos() {
 
     } catch (error) {
         console.error("❌ Error al cargar los datos:", error);
-        document.getElementById('fecha-actualizacion').textContent = "Error al conectar con la base de datos.";
+        const fechaMsg = document.getElementById('fecha-actualizacion');
+        if (fechaMsg) fechaMsg.textContent = "Error al conectar con la base de datos.";
         mostrarDatosDePrueba();
     }
 }
@@ -89,7 +90,7 @@ function procesarYMostrar(datos) {
                 <td><strong>${equipo.id}</strong></td>
                 <td>${equipo.difLogs} días</td>
                 <td>${equipo.difImg} días</td>
-                <td>${equipo.clasifImg || 'Sin clasificar'}</td>
+                <td>${equipo.clasifImg || equipo.clasifLogs || 'Sin clasificar'}</td>
                 <td><span class="badge ${claseColor}">${estadoText}</span></td>
             </tr>
         `;
@@ -97,9 +98,13 @@ function procesarYMostrar(datos) {
     });
 
     // Actualizar KPIs superiores
-    document.getElementById('count-al-dia').textContent = alDia;
-    document.getElementById('count-aviso').textContent = aviso;
-    document.getElementById('count-critico').textContent = critico;
+    const elAlDia = document.getElementById('count-al-dia');
+    const elAviso = document.getElementById('count-aviso');
+    const elCritico = document.getElementById('count-critico');
+    
+    if (elAlDia) elAlDia.textContent = alDia;
+    if (elAviso) elAviso.textContent = aviso;
+    if (elCritico) elCritico.textContent = critico;
     
     const fecha = document.getElementById('fecha-actualizacion');
     if (fecha) fecha.textContent = `Sincronizado: ${new Date().toLocaleTimeString()}`;
@@ -117,7 +122,7 @@ function actualizarMensajeSalud(ok, av, cr) {
     if (!box) return;
     
     const total = ok + av + cr;
-    const porcentajeOk = ((ok / total) * 100).toFixed(1);
+    const porcentajeOk = total > 0 ? ((ok / total) * 100).toFixed(1) : 0;
 
     if (porcentajeOk > 85) {
         box.innerHTML = `✅ <strong>Estado Óptimo:</strong> El sistema tiene un ${porcentajeOk}% de operatividad.`;
@@ -167,9 +172,9 @@ function generarGrafico(ok, av, cr) {
  */
 function mostrarDatosDePrueba() {
     const backup = [
-        { id: 'MODO-PRUEBA-01', difLogs: 2, difImg: 2, clasifImg: '0-15 Días' },
-        { id: 'MODO-PRUEBA-02', difLogs: 22, difImg: 25, clasifImg: '15-30 Días' },
-        { id: 'MODO-PRUEBA-03', difLogs: 45, difImg: 45, clasifImg: '> 30 Días' }
+        { id: 'EQUIPO-ALPHA', difLogs: 2, difImg: 1, clasifImg: '0-15 Días' },
+        { id: 'EQUIPO-BETA', difLogs: 22, difImg: 20, clasifImg: '15-30 Días' },
+        { id: 'EQUIPO-GAMMA', difLogs: 45, difImg: 48, clasifImg: '> 30 Días' }
     ];
     procesarYMostrar(backup);
 }
