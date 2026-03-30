@@ -30,20 +30,20 @@ async function cargarDatos() {
         const filas = lineas.filter(linea => linea.trim() !== "").slice(1); 
 
         const datosMapeados = filas.map(fila => {
-            // Dividimos por coma
-            const columnas = fila.split(',');
+            // Dividimos por coma cuidando los espacios
+            const columnas = fila.split(',').map(c => c.trim());
 
-            // Verificamos que al menos exista el ID del equipo
-            if (!columnas[0] || columnas[0].trim() === "") return null;
+            // Verificamos que al menos exista el ID del equipo en la Columna A
+            if (!columnas[0] || columnas[0] === "") return null;
 
             return {
-                id: columnas[0]?.trim(),             // Col A: SPRIA ID
-                difLogs: parseInt(columnas[1]) || 0,   // Col B: Dif Logs VS Hoy
-                clasifLogs: columnas[2]?.trim(),      // Col C: Clasificacion Logs
-                difImg: parseInt(columnas[3]) || 0,    // Col D: Dif Img VS Hoy
-                clasifImg: columnas[4]?.trim()        // Col E: Clasificacion Img
+                id: columnas[0],                         // Col A: SPRIA ID
+                difLogs: parseInt(columnas[1]) || 0,     // Col B: Dif Logs VS Hoy
+                clasifLogs: columnas[2],                 // Col C: Clasificacion Logs / 15 dias
+                difImg: parseInt(columnas[3]) || 0,      // Col D: Dif Img VS Hoy
+                clasifImg: columnas[4]                  // Col E: Clasificacion Img / 15 dias
             };
-        }).filter(d => d !== null); // Limpiamos registros inválidos
+        }).filter(d => d !== null); 
 
         if (datosMapeados.length === 0) {
             throw new Error("La planilla parece estar vacía o mal formateada.");
@@ -71,15 +71,14 @@ function procesarYMostrar(datos) {
     if (!lista) return;
     lista.innerHTML = '';
 
-    // Ordenamos alfabéticamente por ID del equipo para que sea fácil de leer
+    // Ordenamos alfabéticamente por ID
     datos.sort((a, b) => a.id.localeCompare(b.id));
 
     datos.forEach(equipo => {
         let claseColor = "";
         let estadoText = "";
 
-        // Clasificación basada en Dif Logs (Columna B)
-        // Ajustamos la lógica para que sea igual a tu planilla auxiliar
+        // Clasificación lógica para KPIs y Semáforos basada en Dif Logs (Columna B)
         if (equipo.difLogs <= 15) {
             alDia++;
             claseColor = "success";
@@ -94,13 +93,14 @@ function procesarYMostrar(datos) {
             estadoText = "Crítico";
         }
 
+        // Construcción de la fila de la tabla alineada a tus 5 columnas
         const row = `
             <tr>
                 <td><strong>${equipo.id}</strong></td>
                 <td>${equipo.difLogs} días</td>
+                <td>${equipo.clasifLogs || '---'}</td>
                 <td>${equipo.difImg} días</td>
-                <td>${equipo.clasifImg || equipo.clasifLogs || 'Sin datos'}</td>
-                <td><span class="badge ${claseColor}">${estadoText}</span></td>
+                <td><span class="badge ${claseColor}">${equipo.clasifImg || estadoText}</span></td>
             </tr>
         `;
         lista.insertAdjacentHTML('beforeend', row);
@@ -118,7 +118,6 @@ function procesarYMostrar(datos) {
     const fecha = document.getElementById('fecha-actualizacion');
     if (fecha) fecha.textContent = `Actualizado: ${new Date().toLocaleTimeString()}`;
 
-    // Actualizar Mensaje de Salud y Gráfico
     actualizarMensajeSalud(alDia, aviso, critico);
     generarGrafico(alDia, aviso, critico);
 }
@@ -181,13 +180,11 @@ function generarGrafico(ok, av, cr) {
  */
 function mostrarDatosDePrueba() {
     const backup = [
-        { id: 'SISTEMA-ERROR-01', difLogs: 5, difImg: 5, clasifImg: '0-15 Días' },
-        { id: 'SISTEMA-ERROR-02', difLogs: 40, difImg: 42, clasifImg: '> 30 Días' }
+        { id: 'SISTEMA-ERROR-01', difLogs: 5, clasifLogs: '0-15 Días', difImg: 5, clasifImg: 'OPERATIVO' },
+        { id: 'SISTEMA-ERROR-02', difLogs: 40, clasifLogs: '> 30 Días', difImg: 42, clasifImg: 'CRÍTICO' }
     ];
     procesarYMostrar(backup);
 }
 
-// Iniciar al cargar la página
-document.addEventListener('DOMContentLoaded', cargarDatos);
 // Iniciar al cargar la página
 document.addEventListener('DOMContentLoaded', cargarDatos);
