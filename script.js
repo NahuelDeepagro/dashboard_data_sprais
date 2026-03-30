@@ -33,29 +33,41 @@ async function cargarDatos() {
         }
 
         const datosMapeados = filas.map((fila) => {
-            // Usamos una expresión regular para separar por comas, pero respetando si hay comas dentro de comillas
-            const columnas = fila.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || fila.split(',');
+            // Dividir por comas simple (Google CSV suele ser estándar)
+            const columnas = fila.split(',');
             
-            // Limpieza profunda de cada celda
-            const limpias = columnas.map(c => c.replace(/^"|"$/g, '').trim());
+            // Limpieza segura: solo si la columna existe
+            const limpias = columnas.map(c => c ? c.replace(/^"|"$/g, '').trim() : "");
 
+            // Si la columna A (ID) está vacía, ignoramos la fila
             if (!limpias[0] || limpias[0] === "") return null;
 
+            // Función auxiliar para extraer números de forma segura
+            const extraerNumero = (val) => {
+                if (!val) return 0;
+                const num = val.toString().replace(/[^0-9-]/g, '');
+                return parseInt(num) || 0;
+            };
+
             return {
-                id: limpias[0],                         // Col A: SPRIA ID
-                difLogs: parseInt(limpias[1].replace(/[^0-9-]/g, '')) || 0, // Col B: Forzar solo números
-                clasifLogs: limpias[2] || '---',        // Col C: Clasificacion Logs
-                difImg: parseInt(limpias[3].replace(/[^0-9-]/g, '')) || 0,  // Col D: Forzar solo números
-                clasifImg: limpias[4] || '---'          // Col E: Clasificacion Img
+                id: limpias[0],                                 // Col A: SPRIA ID
+                difLogs: extraerNumero(limpias[1]),             // Col B: Dif Logs VS Hoy
+                clasifLogs: limpias[2] || '---',                // Col C: Clasificacion Logs
+                difImg: extraerNumero(limpias[3]),              // Col D: Dif Img VS Hoy
+                clasifImg: limpias[4] || '---'                  // Col E: Clasificacion Img
             };
         }).filter(d => d !== null);
+
+        if (datosMapeados.length === 0) {
+            throw new Error("No se encontraron datos válidos en la hoja Auxiliar.");
+        }
 
         procesarYMostrar(datosMapeados);
 
     } catch (error) {
         console.error("❌ Error de Conexión:", error);
         if (fechaMsg) {
-            fechaMsg.innerHTML = `<span style="color: #e74c3c;">❌ Error de conexión. Reintentando...</span>`;
+            fechaMsg.innerHTML = `<span style="color: #e74c3c;">❌ Error: ${error.message}</span>`;
         }
         setTimeout(mostrarDatosDePrueba, 2000);
     }
@@ -78,21 +90,17 @@ function procesarYMostrar(datos) {
 
     datos.forEach(equipo => {
         let claseColor = "";
-        let estadoText = "";
-
-        // Definimos el color según la diferencia de Logs (Columna B)
+        
+        // Lógica de colores basada en Dif Logs (Columna B)
         if (equipo.difLogs <= 15) {
             alDia++;
             claseColor = "success";
-            estadoText = "Operativo";
         } else if (equipo.difLogs <= 30) {
             aviso++;
             claseColor = "warning";
-            estadoText = "En Riesgo";
         } else {
             critico++;
             claseColor = "danger";
-            estadoText = "Crítico";
         }
 
         const row = `
@@ -110,7 +118,7 @@ function procesarYMostrar(datos) {
     actualizarKPIs(alDia, aviso, critico);
     
     const fecha = document.getElementById('fecha-actualizacion');
-    if (fecha) {
+    if (fecha && !fecha.innerHTML.includes('❌')) {
         fecha.textContent = `Sincronizado: ${new Date().toLocaleTimeString()}`;
     }
 
