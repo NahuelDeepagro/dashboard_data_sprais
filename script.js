@@ -1,6 +1,6 @@
 // 1. CONFIGURACIÓN DE LA FUENTE DE DATOS
 // Reemplaza esta URL con tu enlace de "Publicar en la web" (formato CSV) de Google Sheets
-const urlPlanilla = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-uq57ZAjgxzlcjOIWtlO_kya8IyM8RVDQW7iu_RkPMVVaWr91VCtxsTJQP6fjRmQj7855fMcoeu9h/pubhtml';
+const urlPlanilla = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-uq57ZAjgxzlcjOIWtlO_kya8IyM8RVDQW7iu_RkPMVVaWr91VCtxsTJQP6fjRmQj7855fMcoeu9h/pub?output=csv';
 
 // Datos de respaldo (se mostrarán si la URL de arriba no funciona o está vacía)
 const datosRespaldo = [
@@ -31,7 +31,7 @@ const datosRespaldo = [
 // 2. FUNCIÓN PARA OBTENER DATOS (FETCH)
 async function cargarDatos() {
     try {
-        if (urlPlanilla === 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-uq57ZAjgxzlcjOIWtlO_kya8IyM8RVDQW7iu_RkPMVVaWr91VCtxsTJQP6fjRmQj7855fMcoeu9h/pubhtml') {
+        if (urlPlanilla === 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-uq57ZAjgxzlcjOIWtlO_kya8IyM8RVDQW7iu_RkPMVVaWr91VCtxsTJQP6fjRmQj7855fMcoeu9h/pub?output=csv') {
             console.log("Usando datos de respaldo locales.");
             procesarYMostrar(datosRespaldo);
             return;
