@@ -3,75 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reporte de Equipos SprAIs - Intervalos</title>
-    <link rel="stylesheet" href="style.css">
-    <!-- Librería Chart.js -->
+    <title>Dashboard Sincronización SPRAI</title>
+    <!-- Tailwind CSS para diseño rápido y moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js para los gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .success { background-color: #def7ec; color: #03543f; }
+        .warning { background-color: #fdf6b2; color: #723b13; }
+        .danger { background-color: #fde8e8; color: #9b1c1c; }
+    </style>
 </head>
-<body>
-    <header>
-        <div class="header-content">
-            <h1>Estado de Sincronización SprAIs</h1>
-            <p id="fecha-actualizacion">Cargando reporte...</p>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Encabezado -->
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Estado de Sincronización</h1>
+                <p id="fecha-actualizacion" class="text-sm text-gray-500">Cargando datos...</p>
+            </div>
+            <div class="flex space-x-4">
+                <div class="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+                    <p class="text-xs text-gray-500 uppercase font-bold">Total Equipos AA/DD</p>
+                    <p id="total-equipos" class="text-xl font-bold text-blue-600">0</p>
+                </div>
+            </div>
         </div>
-    </header>
-    
-    <main>
-        <!-- Fila de Indicadores -->
-        <section class="kpi-row">
-            <div class="kpi-card success">
-                <h3>Al Día (0-15d)</h3>
-                <p id="count-al-dia">0</p>
-            </div>
-            <div class="kpi-card warning">
-                <h3>Aviso (15-30d)</h3>
-                <p id="count-aviso">0</p>
-            </div>
-            <div class="kpi-card danger">
-                <h3>Crítico (>30d)</h3>
-                <p id="count-critico">0</p>
-            </div>
-        </section>
 
-        <!-- Distribución Visual -->
-        <section class="visuals">
-            <div class="chart-box">
-                <h2>Distribución por Antigüedad</h2>
-                <div class="canvas-wrapper">
-                    <canvas id="graficoIntervalos"></canvas>
+        <!-- Sección de Gráficos -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div class="h-64">
+                    <canvas id="graficoLogs"></canvas>
                 </div>
             </div>
-            
-            <div class="summary-box">
-                <h2>Resumen de Salud del Sistema</h2>
-                <p>Análisis basado en la columna <strong>"Dif Logs VS Hoy"</strong> de la planilla auxiliar.</p>
-                <div id="status-message" class="message-box">
-                    Calculando estado general...
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div class="h-64">
+                    <canvas id="graficoImg"></canvas>
                 </div>
             </div>
-        </section>
+        </div>
 
-        <!-- Listado Detallado -->
-        <section class="table-section">
-            <h2>Inventario de Equipos</h2>
-            <div class="table-responsive">
-                <table>
-                    <thead>
+        <!-- Tabla de Datos -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-4 border-b border-gray-100">
+                <h2 class="font-bold text-gray-700">Detalle de Equipos (Filtro AA/DD)</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-50">
                         <tr>
-                            <th>SPRIA ID</th>
-                            <th>Dif Logs VS Hoy</th>
-                            <th>Clasificacion Logs / 15 dias</th>
-                            <th>Dif Img VS Hoy</th>
-                            <th>Clasificacion Img / 15 dias</th>
+                            <th class="p-4 font-semibold text-sm text-gray-600">ID Equipo</th>
+                            <th class="p-4 font-semibold text-sm text-gray-600">Dif. Logs</th>
+                            <th class="p-4 font-semibold text-sm text-gray-600">Rango Logs</th>
+                            <th class="p-4 font-semibold text-sm text-gray-600">Dif. Img</th>
+                            <th class="p-4 font-semibold text-sm text-gray-600">Rango Img</th>
                         </tr>
                     </thead>
-                    <tbody id="listaEquipos">
-                        <!-- Filas generadas por JS -->
+                    <tbody id="listaEquipos" class="divide-y divide-gray-100">
+                        <!-- Los datos se insertan aquí vía JS -->
                     </tbody>
                 </table>
             </div>
-        </section>
-    </main>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>
