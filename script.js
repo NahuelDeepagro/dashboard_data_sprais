@@ -2,7 +2,7 @@
  * CONFIGURACIÓN DE LA FUENTE DE DATOS
  * Enlace directo a la hoja "Auxiliar" (gid=2062779836)
  */
-const urlPlanilla = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-uq57ZAjgxzlcjOIWtlO_kya8IyM8RVDQW7iu_RkPMVVaWr91VCtxsTJQP6fjRmQj7855fMcoeu9h/pub?gid=2062779836&single=true&output=csv';
+const urlPlanilla = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-uq57ZAjgxzlcjOIWtlO_kya8IyM8RVDQW7iu_RkPMVVaWr91VCtxsTJQP6fjRmQj7855fMcoeu9h/pub?gid=813135547&single=true&output=csv';
 
 /**
  * FUNCIÓN PRINCIPAL: CARGAR DATOS DESDE GOOGLE SHEETS
