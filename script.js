@@ -1,5 +1,4 @@
 //const urlPlanilla = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-uq57ZAjgxzlcjOIWtlO_kya8IyM8RVDQW7iu_RkPMVVaWr91VCtxsTJQP6fjRmQj7855fMcoeu9h/pub?output=csv';
-
 /**
  * CONFIGURACIÓN DE LA FUENTE DE DATOS
  * Pega aquí el enlace que obtuviste de "Archivo" -> "Compartir" -> "Publicar en la web" -> formato CSV.
@@ -10,51 +9,75 @@ const urlPlanilla = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-uq57ZAjg
  * FUNCIÓN PRINCIPAL: CARGAR DATOS DESDE GOOGLE SHEETS
  */
 async function cargarDatos() {
+    const fechaMsg = document.getElementById('fecha-actualizacion');
+    
     try {
-        // Verificación mejorada: Si la URL no empieza con http, usamos datos de prueba
+        // 1. Verificación de URL
         if (!urlPlanilla || urlPlanilla.includes('https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-uq57ZAjgxzlcjOIWtlO_kya8IyM8RVDQW7iu_RkPMVVaWr91VCtxsTJQP6fjRmQj7855fMcoeu9h/pub?output=csv') || !urlPlanilla.startsWith('http')) {
-            console.warn("⚠️ URL no configurada correctamente. Usando datos de prueba.");
+            console.warn("⚠️ URL no configurada. Cargando modo demostración.");
+            if (fechaMsg) fechaMsg.innerHTML = '<span style="color: orange;">⚠️ Usando datos de prueba (URL no configurada)</span>';
             mostrarDatosDePrueba();
             return;
         }
 
-        const respuesta = await fetch(urlPlanilla);
-        if (!respuesta.ok) throw new Error("No se pudo obtener respuesta de Google Sheets");
-        
-        const csvText = await respuesta.text();
-        
-        // Dividimos por filas y eliminamos la primera (encabezados)
-        const lineas = csvText.split(/\r?\n/);
-        
-        // Filtramos líneas vacías y omitimos el encabezado
-        const filas = lineas.filter(linea => linea.trim() !== "").slice(1); 
+        if (fechaMsg) fechaMsg.textContent = "Conectando con Google Sheets...";
 
-        const datosMapeados = filas.map(fila => {
-            // Dividimos por coma cuidando los espacios
-            const columnas = fila.split(',').map(c => c.trim());
+        // 2. Evitar Caché
+        const urlFinal = urlPlanilla.includes('?') 
+            ? `${urlPlanilla}&t=${Date.now()}` 
+            : `${urlPlanilla}?t=${Date.now()}`;
 
-            // Verificamos que al menos exista el ID del equipo en la Columna A
+        const respuesta = await fetch(urlFinal);
+        
+        if (!respuesta.ok) {
+            throw new Error(`Error HTTP: ${respuesta.status}`);
+        }
+        
+        const textRaw = await respuesta.text();
+        
+        // Diagnóstico: Ver si recibimos HTML (error común de login) o CSV
+        if (textRaw.includes('<html') || textRaw.includes('<!DOCTYPE')) {
+            throw new Error("El enlace devuelve una página web, no un archivo CSV. Asegúrate de elegir 'Valores separados por comas (.csv)' al publicar.");
+        }
+
+        // 3. Procesamiento de líneas
+        const lineas = textRaw.split(/\r?\n/).filter(l => l.trim() !== "");
+        
+        if (lineas.length <= 1) {
+            throw new Error("La planilla parece estar vacía (solo tiene encabezados o nada).");
+        }
+
+        const filas = lineas.slice(1); // Omitir encabezado
+
+        // 4. Mapeo de Datos
+        const datosMapeados = filas.map((fila, index) => {
+            // Detectar separador
+            const separador = fila.includes(';') ? ';' : ',';
+            const columnas = fila.split(separador).map(c => c.replace(/^"|"$/g, '').trim());
+
+            // Validación de estructura mínima (Columnas A y B deben existir)
             if (!columnas[0] || columnas[0] === "") return null;
 
             return {
                 id: columnas[0],                         // Col A: SPRIA ID
                 difLogs: parseInt(columnas[1]) || 0,     // Col B: Dif Logs VS Hoy
-                clasifLogs: columnas[2],                 // Col C: Clasificacion Logs / 15 dias
+                clasifLogs: columnas[2] || '---',        // Col C: Clasificacion Logs
                 difImg: parseInt(columnas[3]) || 0,      // Col D: Dif Img VS Hoy
-                clasifImg: columnas[4]                  // Col E: Clasificacion Img / 15 dias
+                clasifImg: columnas[4] || '---'          // Col E: Clasificacion Img
             };
-        }).filter(d => d !== null); 
+        }).filter(d => d !== null);
 
         if (datosMapeados.length === 0) {
-            throw new Error("La planilla parece estar vacía o mal formateada.");
+            throw new Error("No se encontraron equipos válidos en el archivo.");
         }
 
         procesarYMostrar(datosMapeados);
 
     } catch (error) {
-        console.error("❌ Error al cargar los datos:", error);
-        const fechaMsg = document.getElementById('fecha-actualizacion');
-        if (fechaMsg) fechaMsg.textContent = "Error: Verifica que el enlace sea CSV y público.";
+        console.error("❌ Error de Conexión:", error);
+        if (fechaMsg) {
+            fechaMsg.innerHTML = `<span style="color: #e74c3c;">❌ Error: ${error.message}</span>`;
+        }
         mostrarDatosDePrueba();
     }
 }
@@ -71,14 +94,14 @@ function procesarYMostrar(datos) {
     if (!lista) return;
     lista.innerHTML = '';
 
-    // Ordenamos alfabéticamente por ID
+    // Orden alfabético
     datos.sort((a, b) => a.id.localeCompare(b.id));
 
     datos.forEach(equipo => {
         let claseColor = "";
         let estadoText = "";
 
-        // Clasificación lógica para KPIs y Semáforos basada en Dif Logs (Columna B)
+        // Lógica basada en Dif Logs
         if (equipo.difLogs <= 15) {
             alDia++;
             claseColor = "success";
@@ -93,63 +116,53 @@ function procesarYMostrar(datos) {
             estadoText = "Crítico";
         }
 
-        // Construcción de la fila de la tabla alineada a tus 5 columnas
         const row = `
             <tr>
                 <td><strong>${equipo.id}</strong></td>
                 <td>${equipo.difLogs} días</td>
-                <td>${equipo.clasifLogs || '---'}</td>
+                <td>${equipo.clasifLogs}</td>
                 <td>${equipo.difImg} días</td>
-                <td><span class="badge ${claseColor}">${equipo.clasifImg || estadoText}</span></td>
+                <td><span class="badge ${claseColor}">${equipo.clasifImg}</span></td>
             </tr>
         `;
         lista.insertAdjacentHTML('beforeend', row);
     });
 
-    // Actualizar KPIs superiores
-    const elAlDia = document.getElementById('count-al-dia');
-    const elAviso = document.getElementById('count-aviso');
-    const elCritico = document.getElementById('count-critico');
-    
-    if (elAlDia) elAlDia.textContent = alDia;
-    if (elAviso) elAviso.textContent = aviso;
-    if (elCritico) elCritico.textContent = critico;
+    actualizarKPIs(alDia, aviso, critico);
     
     const fecha = document.getElementById('fecha-actualizacion');
-    if (fecha) fecha.textContent = `Actualizado: ${new Date().toLocaleTimeString()}`;
+    if (fecha && !fecha.innerHTML.includes('❌')) {
+        fecha.textContent = `Sincronizado: ${new Date().toLocaleTimeString()}`;
+    }
 
     actualizarMensajeSalud(alDia, aviso, critico);
     generarGrafico(alDia, aviso, critico);
 }
 
-/**
- * MENSAJE DINÁMICO SEGÚN ESTADO GENERAL
- */
+function actualizarKPIs(ok, av, cr) {
+    const ids = { 'count-al-dia': ok, 'count-aviso': av, 'count-critico': cr };
+    for (const [id, val] of Object.entries(ids)) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    }
+}
+
 function actualizarMensajeSalud(ok, av, cr) {
     const box = document.getElementById('status-message');
     if (!box) return;
     
     const total = ok + av + cr;
-    const porcentajeOk = total > 0 ? ((ok / total) * 100).toFixed(1) : 0;
+    const porc = total > 0 ? ((ok / total) * 100).toFixed(1) : 0;
 
-    if (porcentajeOk > 85) {
-        box.innerHTML = `✅ <strong>Estado Óptimo:</strong> El ${porcentajeOk}% de los equipos está al día.`;
-        box.style.borderColor = "#2ecc71";
-    } else if (porcentajeOk > 60) {
-        box.innerHTML = `⚠️ <strong>Atención:</strong> Hay equipos que requieren revisión de sincronización.`;
-        box.style.borderColor = "#f1c40f";
-    } else {
-        box.innerHTML = `🚨 <strong>Crítico:</strong> La mayoría de los equipos presentan retrasos importantes.`;
-        box.style.borderColor = "#e74c3c";
-    }
+    box.innerHTML = porc > 85 
+        ? `✅ <strong>Estado Óptimo:</strong> El ${porc}% de la flota sincroniza bien.`
+        : `⚠️ <strong>Revisión Necesaria:</strong> Hay ${av + cr} equipos con retraso.`;
+    box.style.borderColor = porc > 85 ? "#2ecc71" : "#f1c40f";
 }
 
-/**
- * GENERACIÓN DEL GRÁFICO DE DONA (Chart.js)
- */
 function generarGrafico(ok, av, cr) {
     const canvas = document.getElementById('graficoIntervalos');
-    if (!canvas) return;
+    if (!canvas || typeof Chart === 'undefined') return;
     
     const ctx = canvas.getContext('2d');
     if (window.miGrafico) window.miGrafico.destroy();
@@ -157,34 +170,31 @@ function generarGrafico(ok, av, cr) {
     window.miGrafico = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['0-15 días', '15-30 días', '>30 días'],
+            labels: ['0-15d', '15-30d', '>30d'],
             datasets: [{
                 data: [ok, av, cr],
                 backgroundColor: ['#2ecc71', '#f1c40f', '#e74c3c'],
-                borderWidth: 2,
-                hoverOffset: 15
+                borderWidth: 2
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom' }
-            }
+            plugins: { legend: { position: 'bottom' } }
         }
     });
 }
 
-/**
- * DATOS DE PRUEBA (Solo se activan si falla la URL o no está configurada)
- */
 function mostrarDatosDePrueba() {
-    const backup = [
-        { id: 'SISTEMA-ERROR-01', difLogs: 5, clasifLogs: '0-15 Días', difImg: 5, clasifImg: 'OPERATIVO' },
-        { id: 'SISTEMA-ERROR-02', difLogs: 40, clasifLogs: '> 30 Días', difImg: 42, clasifImg: 'CRÍTICO' }
-    ];
-    procesarYMostrar(backup);
+    const lista = document.getElementById('listaEquipos');
+    // Solo mostramos prueba si la tabla está vacía
+    if (lista && lista.children.length === 0) {
+        const backup = [
+            { id: 'DEMO-AL-DIA', difLogs: 2, clasifLogs: '0-15 Días', difImg: 2, clasifImg: '0-15 Días' },
+            { id: 'DEMO-RETRASO', difLogs: 45, clasifLogs: '> 30 Días', difImg: 45, clasifImg: '> 30 Días' }
+        ];
+        procesarYMostrar(backup);
+    }
 }
 
-// Iniciar al cargar la página
 document.addEventListener('DOMContentLoaded', cargarDatos);
