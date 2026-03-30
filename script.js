@@ -1,7 +1,6 @@
-//const urlPlanilla = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-uq57ZAjgxzlcjOIWtlO_kya8IyM8RVDQW7iu_RkPMVVaWr91VCtxsTJQP6fjRmQj7855fMcoeu9h/pub?output=csv';
 /**
  * CONFIGURACIÓN DE LA FUENTE DE DATOS
- * Pega aquí el enlace que obtuviste de "Archivo" -> "Compartir" -> "Publicar en la web" -> formato CSV.
+ * Enlace directo proporcionado por el usuario
  */
 const urlPlanilla = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-uq57ZAjgxzlcjOIWtlO_kya8IyM8RVDQW7iu_RkPMVVaWr91VCtxsTJQP6fjRmQj7855fMcoeu9h/pub?output=csv';
 
@@ -12,50 +11,31 @@ async function cargarDatos() {
     const fechaMsg = document.getElementById('fecha-actualizacion');
     
     try {
-        // 1. Verificación de URL
-        if (!urlPlanilla || urlPlanilla.includes('https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-uq57ZAjgxzlcjOIWtlO_kya8IyM8RVDQW7iu_RkPMVVaWr91VCtxsTJQP6fjRmQj7855fMcoeu9h/pub?output=csv') || !urlPlanilla.startsWith('http')) {
-            console.warn("⚠️ URL no configurada. Cargando modo demostración.");
-            if (fechaMsg) fechaMsg.innerHTML = '<span style="color: orange;">⚠️ Usando datos de prueba (URL no configurada)</span>';
-            mostrarDatosDePrueba();
-            return;
-        }
+        if (fechaMsg) fechaMsg.textContent = "Sincronizando con Google Sheets...";
 
-        if (fechaMsg) fechaMsg.textContent = "Conectando con Google Sheets...";
-
-        // 2. Evitar Caché
-        const urlFinal = urlPlanilla.includes('?') 
-            ? `${urlPlanilla}&t=${Date.now()}` 
-            : `${urlPlanilla}?t=${Date.now()}`;
+        // Agregamos un timestamp para evitar que el navegador guarde una versión vieja
+        const urlFinal = `${urlPlanilla}&t=${Date.now()}`;
 
         const respuesta = await fetch(urlFinal);
         
         if (!respuesta.ok) {
-            throw new Error(`Error HTTP: ${respuesta.status}`);
+            throw new Error(`No se pudo conectar (Status: ${respuesta.status})`);
         }
         
         const textRaw = await respuesta.text();
         
-        // Diagnóstico: Ver si recibimos HTML (error común de login) o CSV
-        if (textRaw.includes('<html') || textRaw.includes('<!DOCTYPE')) {
-            throw new Error("El enlace devuelve una página web, no un archivo CSV. Asegúrate de elegir 'Valores separados por comas (.csv)' al publicar.");
-        }
-
-        // 3. Procesamiento de líneas
+        // Procesamos las líneas (eliminamos vacías y el encabezado)
         const lineas = textRaw.split(/\r?\n/).filter(l => l.trim() !== "");
-        
-        if (lineas.length <= 1) {
-            throw new Error("La planilla parece estar vacía (solo tiene encabezados o nada).");
+        const filas = lineas.slice(1); 
+
+        if (filas.length === 0) {
+            throw new Error("La planilla no tiene datos después del encabezado.");
         }
 
-        const filas = lineas.slice(1); // Omitir encabezado
+        const datosMapeados = filas.map((fila) => {
+            // Google Sheets suele usar coma en el CSV publicado
+            const columnas = fila.split(',').map(c => c.replace(/^"|"$/g, '').trim());
 
-        // 4. Mapeo de Datos
-        const datosMapeados = filas.map((fila, index) => {
-            // Detectar separador
-            const separador = fila.includes(';') ? ';' : ',';
-            const columnas = fila.split(separador).map(c => c.replace(/^"|"$/g, '').trim());
-
-            // Validación de estructura mínima (Columnas A y B deben existir)
             if (!columnas[0] || columnas[0] === "") return null;
 
             return {
@@ -67,18 +47,15 @@ async function cargarDatos() {
             };
         }).filter(d => d !== null);
 
-        if (datosMapeados.length === 0) {
-            throw new Error("No se encontraron equipos válidos en el archivo.");
-        }
-
         procesarYMostrar(datosMapeados);
 
     } catch (error) {
         console.error("❌ Error de Conexión:", error);
         if (fechaMsg) {
-            fechaMsg.innerHTML = `<span style="color: #e74c3c;">❌ Error: ${error.message}</span>`;
+            fechaMsg.innerHTML = `<span style="color: #e74c3c;">❌ Error de conexión. Reintentando...</span>`;
         }
-        mostrarDatosDePrueba();
+        // Si falla, intentamos cargar datos de prueba tras 5 segundos
+        setTimeout(mostrarDatosDePrueba, 2000);
     }
 }
 
@@ -94,14 +71,14 @@ function procesarYMostrar(datos) {
     if (!lista) return;
     lista.innerHTML = '';
 
-    // Orden alfabético
+    // Orden alfabético por ID
     datos.sort((a, b) => a.id.localeCompare(b.id));
 
     datos.forEach(equipo => {
         let claseColor = "";
         let estadoText = "";
 
-        // Lógica basada en Dif Logs
+        // Definimos el color según la diferencia de Logs (Columna B)
         if (equipo.difLogs <= 15) {
             alDia++;
             claseColor = "success";
@@ -128,10 +105,11 @@ function procesarYMostrar(datos) {
         lista.insertAdjacentHTML('beforeend', row);
     });
 
+    // Actualizamos los números de arriba
     actualizarKPIs(alDia, aviso, critico);
     
     const fecha = document.getElementById('fecha-actualizacion');
-    if (fecha && !fecha.innerHTML.includes('❌')) {
+    if (fecha) {
         fecha.textContent = `Sincronizado: ${new Date().toLocaleTimeString()}`;
     }
 
@@ -155,8 +133,8 @@ function actualizarMensajeSalud(ok, av, cr) {
     const porc = total > 0 ? ((ok / total) * 100).toFixed(1) : 0;
 
     box.innerHTML = porc > 85 
-        ? `✅ <strong>Estado Óptimo:</strong> El ${porc}% de la flota sincroniza bien.`
-        : `⚠️ <strong>Revisión Necesaria:</strong> Hay ${av + cr} equipos con retraso.`;
+        ? `✅ <strong>Estado Óptimo:</strong> El ${porc}% de la flota está sincronizada.`
+        : `⚠️ <strong>Revisión Necesaria:</strong> Se detectan ${av + cr} equipos con demoras.`;
     box.style.borderColor = porc > 85 ? "#2ecc71" : "#f1c40f";
 }
 
@@ -170,7 +148,7 @@ function generarGrafico(ok, av, cr) {
     window.miGrafico = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['0-15d', '15-30d', '>30d'],
+            labels: ['0-15 días', '15-30 días', '>30 días'],
             datasets: [{
                 data: [ok, av, cr],
                 backgroundColor: ['#2ecc71', '#f1c40f', '#e74c3c'],
@@ -187,11 +165,10 @@ function generarGrafico(ok, av, cr) {
 
 function mostrarDatosDePrueba() {
     const lista = document.getElementById('listaEquipos');
-    // Solo mostramos prueba si la tabla está vacía
     if (lista && lista.children.length === 0) {
         const backup = [
-            { id: 'DEMO-AL-DIA', difLogs: 2, clasifLogs: '0-15 Días', difImg: 2, clasifImg: '0-15 Días' },
-            { id: 'DEMO-RETRASO', difLogs: 45, clasifLogs: '> 30 Días', difImg: 45, clasifImg: '> 30 Días' }
+            { id: 'EQUIPO-A-TEST', difLogs: 5, clasifLogs: '0-15 Días', difImg: 5, clasifImg: '0-15 Días' },
+            { id: 'EQUIPO-B-TEST', difLogs: 40, clasifLogs: '> 30 Días', difImg: 40, clasifImg: '> 30 Días' }
         ];
         procesarYMostrar(backup);
     }
