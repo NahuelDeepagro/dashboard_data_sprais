@@ -3,50 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard SprAIs - Reporte Realtime</title>
+    <title>Reporte de Equipos SprAIs - Intervalos</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Librería Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <header>
-        <h1>Dashboard de Control SprAIs</h1>
-        <p id="fecha-actualizacion"></p>
+        <div class="header-content">
+            <h1>Estado de Sincronización SprAIs</h1>
+            <p id="fecha-actualizacion">Cargando reporte...</p>
+        </div>
     </header>
     
     <main>
-        <section class="summary-cards">
-            <div class="card">
-                <h3>Total Equipos</h3>
-                <p id="totalEquipos">0</p>
+        <!-- Fila de Indicadores -->
+        <section class="kpi-row">
+            <div class="kpi-card success">
+                <h3>Al Día (0-15d)</h3>
+                <p id="count-al-dia">0</p>
             </div>
-            <div class="card warning">
-                <h3>Logs con Retraso</h3>
-                <p id="equiposRetrasados">0</p>
+            <div class="kpi-card warning">
+                <h3>Aviso (15-30d)</h3>
+                <p id="count-aviso">0</p>
             </div>
-            <div class="card alert">
-                <h3>Fallas Starlink</h3>
-                <p id="equiposSinStarlink">0</p>
+            <div class="kpi-card danger">
+                <h3>Crítico (>30d)</h3>
+                <p id="count-critico">0</p>
             </div>
         </section>
 
-        <section class="chart-container">
-            <canvas id="graficoUploads"></canvas>
+        <!-- Distribución Visual -->
+        <section class="visuals">
+            <div class="chart-box">
+                <h2>Distribución por Antigüedad</h2>
+                <div class="canvas-wrapper">
+                    <canvas id="graficoIntervalos"></canvas>
+                </div>
+            </div>
+            
+            <div class="summary-box">
+                <h2>Resumen de Salud del Sistema</h2>
+                <p>Análisis basado en la columna <strong>"Dif Logs VS Hoy"</strong> de la planilla auxiliar.</p>
+                <div id="status-message" class="message-box">
+                    Calculando estado general...
+                </div>
+            </div>
         </section>
 
-        <section class="table-container">
-            <h2>Detalle de Estado por Equipo</h2>
-            <table id="tablaEquipos">
-                <thead>
-                    <tr>
-                        <th>ID Equipo</th>
-                        <th>Docs Subidos</th>
-                        <th>Diferencia Logs</th>
-                        <th>Estado Starlink</th>
-                    </tr>
-                </thead>
-                <tbody id="cuerpoTabla">
+        <!-- Listado Detallado -->
+        <section class="table-section">
+            <h2>Inventario de Equipos</h2>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Equipo ID</th>
+                            <th>Docs (Total)</th>
+                            <th>Último Log</th>
+                            <th>Intervalo</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listaEquipos">
+                        <!-- Filas generadas por JS -->
                     </tbody>
-            </table>
+                </table>
+            </div>
         </section>
     </main>
 
