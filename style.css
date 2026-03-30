@@ -1,0 +1,71 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f7f6;
+    margin: 0;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+header {
+    margin: 20px 0;
+}
+
+h1 {
+    color: #00ad9f; /* Color Netlify */
+}
+
+main {
+    width: 90%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Estilos para las Tarjetas */
+.summary-cards {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+.card {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    flex: 1; /* Distribuye el espacio equitativamente */
+    text-align: center;
+}
+
+.card h3 {
+    margin-top: 0;
+    font-size: 0.9rem;
+    color: #666;
+    text-transform: uppercase;
+}
+
+.card p {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin: 10px 0 0 0;
+    color: #00ad9f;
+}
+
+/* Colores especiales para advertencias */
+.card.warning h3 { color: #f39c12; }
+.card.warning p { color: #f39c12; }
+
+.card.alert h3 { color: #e74c3c; }
+.card.alert p { color: #e74c3c; }
+
+/* Estilos para el contenedor del Gráfico */
+.chart-container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    height: 400px; /* Altura fija para el gráfico */
+}
